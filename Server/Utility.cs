@@ -719,27 +719,56 @@ namespace Server
 			return InUpdateRange(m, m, p);
 		}
 
+		public static bool InUpdateRange(Mobile m, Point3D p)
+		{
+			return InUpdateRange(GetUpdateRange(m), m.X, m.Y, p.m_X, p.m_Y);
+		}
+
 		public static bool InUpdateRange(Mobile m, IPoint3D p1, IPoint3D p2)
 		{
-			int range = Core.GlobalUpdateRange;
+			// Coordinates are read without assigning an item's world location (a Point3D) back to an
+			// IPoint3D variable, which boxed it on every call.
+			int x1, y1, x2, y2;
 
-			if (m.NetState != null)
-			{
-				range = m.NetState.UpdateRange;
-			}
+			GetUpdateXY(p1, out x1, out y1);
+			GetUpdateXY(p2, out x2, out y2);
 
-			if (p1 is Item)
-			{
-				p1 = ((Item)p1).GetWorldLocation();
-			}
-
-			if (p2 is Item)
-			{
-				p2 = ((Item)p2).GetWorldLocation();
-			}
-
-			return (p1.X >= (p2.X - range)) && (p1.X <= (p2.X + range)) && (p1.Y >= (p2.Y - range)) && (p1.Y <= (p2.Y + range));
+			return InUpdateRange(GetUpdateRange(m), x1, y1, x2, y2);
         }
+
+		// Point3D overload: callers passing locations no longer box them into IPoint3D.
+		public static bool InUpdateRange(Mobile m, Point3D p1, Point3D p2)
+		{
+			return InUpdateRange(GetUpdateRange(m), p1.m_X, p1.m_Y, p2.m_X, p2.m_Y);
+		}
+
+		private static int GetUpdateRange(Mobile m)
+		{
+			return m.NetState != null ? m.NetState.UpdateRange : Core.GlobalUpdateRange;
+		}
+
+		private static void GetUpdateXY(IPoint3D p, out int x, out int y)
+		{
+			Item item = p as Item;
+
+			if (item != null)
+			{
+				Point3D world = item.GetWorldLocation();
+
+				x = world.m_X;
+				y = world.m_Y;
+			}
+			else
+			{
+				x = p.X;
+				y = p.Y;
+			}
+		}
+
+		private static bool InUpdateRange(int range, int x1, int y1, int x2, int y2)
+		{
+			return (x1 >= (x2 - range)) && (x1 <= (x2 + range)) && (y1 >= (y2 - range)) && (y1 <= (y2 + range));
+		}
 		#endregion
 
 		public static Direction GetDirection(IPoint2D from, IPoint2D to)
