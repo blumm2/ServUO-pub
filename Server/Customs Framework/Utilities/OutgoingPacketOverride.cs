@@ -19,6 +19,9 @@ namespace CustomsFramework
 		private static readonly OutgoingPacketOverrideHandler[] _ExtendedHandlersLow;
 		private static readonly Dictionary<int, OutgoingPacketOverrideHandler> _ExtendedHandlersHigh;
 
+		// Set once any override is registered; until then outgoing packets skip the per-packet decompression.
+		private static bool _AnyHandlers;
+
 		static OutgoingPacketOverrides()
 		{
 			_Handlers = new OutgoingPacketOverrideHandler[0x100];
@@ -35,6 +38,11 @@ namespace CustomsFramework
 		public static void Register(int packetID, bool compressed, OutgoingPacketOverrideHandler handler)
 		{
 			_Handlers[packetID] = handler;
+
+			if (handler != null)
+			{
+				_AnyHandlers = true;
+			}
 		}
 
 		public static OutgoingPacketOverrideHandler GetHandler(int packetID)
@@ -51,6 +59,11 @@ namespace CustomsFramework
 			else
 			{
 				_ExtendedHandlersHigh[packetID] = handler;
+			}
+
+			if (handler != null)
+			{
+				_AnyHandlers = true;
 			}
 		}
 
@@ -85,6 +98,16 @@ namespace CustomsFramework
 
 			public void EncodeOutgoingPacket(NetState to, ref byte[] packetBuffer, ref int packetLength)
 			{
+				if (!_AnyHandlers)
+				{
+					if (_Successor != null)
+					{
+						_Successor.EncodeOutgoingPacket(to, ref packetBuffer, ref packetLength);
+					}
+
+					return;
+				}
+
 				byte[] buffer;
 				int bufferLength = 0;
 
