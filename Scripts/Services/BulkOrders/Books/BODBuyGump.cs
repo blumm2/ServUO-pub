@@ -44,6 +44,12 @@ namespace Server.Engines.BulkOrders
             {
                 PlayerVendor pv = this.m_Book.RootParent as PlayerVendor;
 
+                // The buyer must still be at the vendor (alive, in range, not banned) when confirming.
+                if (pv != null && !pv.CanInteractWith(this.m_From, false))
+                {
+                    return;
+                }
+
                 if (this.m_Book.Entries.Contains(this.m_Object) && pv != null)
                 {
                     int price = 0;

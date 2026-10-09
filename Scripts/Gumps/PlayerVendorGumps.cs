@@ -61,30 +61,26 @@ namespace Server.Gumps
                     return;
                 }
 
-                int totalGold = 0;
+                int packGold = from.Backpack != null ? from.Backpack.GetAmount(typeof(Gold)) : 0;
+                int fromBank = Math.Max(0, m_VI.Price - packGold);
 
-                if (from.Backpack != null)
-                    totalGold += from.Backpack.GetAmount(typeof(Gold));
-				
-                totalGold += Banker.GetBalance(from);
-
-                if (totalGold < m_VI.Price)
+                // Take the bank share first and only hand over the item once payment succeeded;
+                // the Withdraw result used to be ignored and the item given regardless.
+                if (fromBank > 0 && !Banker.Withdraw(from, fromBank))
                 {
                     m_Vendor.SayTo(from, 503205); // You cannot afford this item.
                 }
                 else if (!from.PlaceInBackpack(m_VI.Item))
                 {
-                    m_Vendor.SayTo(from, 503204); // You do not have room in your backpack for 
+                    if (fromBank > 0)
+                        Banker.Deposit(from, fromBank);
+
+                    m_Vendor.SayTo(from, 503204); // You do not have room in your backpack for
                 }
                 else
                 {
-                    int leftPrice = m_VI.Price;
-
-                    if (from.Backpack != null)
-                        leftPrice -= from.Backpack.ConsumeUpTo(typeof(Gold), leftPrice);
-
-                    if (leftPrice > 0)
-                        Banker.Withdraw(from, leftPrice);
+                    if (from.Backpack != null && m_VI.Price > fromBank)
+                        from.Backpack.ConsumeUpTo(typeof(Gold), m_VI.Price - fromBank);
 
                     int commission = 0;
 
