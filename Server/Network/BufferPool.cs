@@ -90,6 +90,28 @@ namespace Server.Network
             m_FreeBuffers.Enqueue(buffer);
         }
 
+        /// <summary>
+        /// Releases a buffer of which only the first <paramref name="usedLength"/> bytes were written
+        /// since it was acquired. Only that part is cleared, which matters for large buffers that are
+        /// mostly unused (e.g. the 64 KB compressor buffer cleared after every compiled packet).
+        /// </summary>
+        public void ReleaseBuffer(byte[] buffer, int usedLength)
+        {
+            if (buffer == null || buffer.Length != m_BufferSize)
+            {
+                return;
+            }
+
+            if (usedLength < 0 || usedLength > buffer.Length)
+            {
+                usedLength = buffer.Length;
+            }
+
+            Array.Clear(buffer, 0, usedLength);
+
+            m_FreeBuffers.Enqueue(buffer);
+        }
+
         public void Free()
         {
             m_Pools.TryRemove(this, out _);

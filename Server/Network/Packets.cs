@@ -5444,6 +5444,10 @@ m_Stream.Write( (int) renderMode );
 							length);
 						op.WriteLine(new StackTrace());
 					}
+
+					// The overflowed buffer used to be dropped instead of returned to the pool.
+					lock (m_CompressorBuffers)
+						m_CompressorBuffers.ReleaseBuffer(buffer);
 				}
 				else
 				{
@@ -5462,8 +5466,9 @@ m_Stream.Write( (int) renderMode );
 
 					Buffer.BlockCopy(buffer, 0, m_CompiledBuffer, 0, length);
 
+					// Only the compressed bytes were written: clear those, not the whole 64 KB.
 					lock (m_CompressorBuffers)
-						m_CompressorBuffers.ReleaseBuffer(buffer);
+						m_CompressorBuffers.ReleaseBuffer(buffer, length);
 				}
 			}
 			else if (length > 0)
