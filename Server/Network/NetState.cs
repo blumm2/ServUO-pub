@@ -1053,9 +1053,11 @@ namespace Server.Network
 
         public static void FlushAll()
         {
-            foreach (NetState ns in m_Instances.Keys)
+            // Runs every main loop pass: enumerate the dictionary directly. Keys takes every bucket
+            // lock and copies all keys into a new list each time.
+            foreach (var kvp in m_Instances)
             {
-                _ = ns.Flush();
+                _ = kvp.Key.Flush();
             }
         }
 
