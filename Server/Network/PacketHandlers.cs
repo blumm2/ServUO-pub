@@ -449,7 +449,7 @@ namespace Server.Network
 			{
 				return;
 			}
-			else if (vendor.Deleted || !Utility.RangeCheck(vendor.Location, state.Mobile.Location, 10))
+			else if (vendor.Deleted || vendor.Map != state.Mobile.Map || !Utility.RangeCheck(vendor.Location, state.Mobile.Location, 10))
 			{
 				state.Send(new EndVendorBuy(vendor));
 				return;
@@ -457,9 +457,15 @@ namespace Server.Network
 
 			if (flag == 0x02)
 			{
+				// The declared size must match the received packet and hold whole 7-byte entries.
+				if (msgSize != pvSrc.Size)
+				{
+					return;
+				}
+
 				msgSize -= 1 + 2 + 4 + 1;
 
-				if ((msgSize / 7) > 100)
+				if (msgSize < 0 || (msgSize % 7) != 0 || (msgSize / 7) > 100)
 				{
 					return;
 				}
@@ -471,7 +477,27 @@ namespace Server.Network
 					Serial serial = pvSrc.ReadInt32();
 					int amount = pvSrc.ReadInt16();
 
-					buyList.Add(new BuyItemResponse(serial, amount));
+					if (amount <= 0)
+					{
+						continue;
+					}
+
+					// A serial listed twice would be charged twice but delivered once.
+					bool duplicate = false;
+
+					for (int i = 0; i < buyList.Count; i++)
+					{
+						if (buyList[i].Serial == serial)
+						{
+							duplicate = true;
+							break;
+						}
+					}
+
+					if (!duplicate)
+					{
+						buyList.Add(new BuyItemResponse(serial, amount));
+					}
 				}
 
 				if (buyList.Count > 0)
@@ -499,7 +525,7 @@ namespace Server.Network
 			{
 				return;
 			}
-			else if (vendor.Deleted || !Utility.RangeCheck(vendor.Location, state.Mobile.Location, 10))
+			else if (vendor.Deleted || vendor.Map != state.Mobile.Map || !Utility.RangeCheck(vendor.Location, state.Mobile.Location, 10))
 			{
 				state.Send(new EndVendorSell(vendor));
 				return;

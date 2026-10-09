@@ -2097,7 +2097,7 @@ namespace Server.Mobiles
 
 			var info = GetSellInfo();
 			var buyInfo = GetBuyInfo();
-			int GiveGold = 0;
+			long GiveGold = 0;
 			int Sold = 0;
 			Container cont;
 
@@ -2147,6 +2147,9 @@ namespace Server.Mobiles
 						{
 							amount = resp.Item.Amount;
 						}
+
+						// Price the item before it is consumed, moved or deleted below.
+						var singlePrice = ssi.GetSellPriceFor(resp.Item, this);
 
 						if (ssi.IsResellable(resp.Item))
 						{
@@ -2203,8 +2206,7 @@ namespace Server.Mobiles
 							}
 						}
 
-                        var singlePrice = ssi.GetSellPriceFor(resp.Item, this);
-                        GiveGold += singlePrice * amount;
+                        GiveGold += (long)singlePrice * amount;
 
                         EventSink.InvokeValidVendorSell(new ValidVendorSellEventArgs(seller, this, resp.Item, singlePrice));
 
@@ -2221,7 +2223,7 @@ namespace Server.Mobiles
 					GiveGold -= 60000;
 				}
 
-				seller.AddToBackpack(new Gold(GiveGold));
+				seller.AddToBackpack(new Gold((int)GiveGold));
 
 				seller.PlaySound(0x0037); //Gold dropping sound
 

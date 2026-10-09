@@ -1256,7 +1256,7 @@ namespace Server
 
 		public static bool RangeCheck(IPoint2D p1, IPoint2D p2, int range)
 		{
-			return (p1.X >= (p2.X - range)) && (p1.X <= (p2.X + range)) && (p1.Y >= (p2.Y - range)) && (p2.Y <= (p2.Y + range));
+			return (p1.X >= (p2.X - range)) && (p1.X <= (p2.X + range)) && (p1.Y >= (p2.Y - range)) && (p1.Y <= (p2.Y + range));
 		}
 
 		public static void FormatBuffer(TextWriter output, Stream input, int length)
