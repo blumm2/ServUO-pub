@@ -133,9 +133,12 @@ namespace Server.Engines.ResortAndCasino
                         string text = tr.Text;
                         int num = Utility.ToInt32(text);
 
-                        if (num > 0)
+                        // The gold cost must fit an int; num * ChipCost used to overflow and charge almost nothing.
+                        long cost = (long)num * CasinoData.ChipCost;
+
+                        if (num > 0 && cost <= int.MaxValue)
                         {
-                            if (Banker.Withdraw(User, num * CasinoData.ChipCost, true))
+                            if (Banker.Withdraw(User, (int)cost, true))
                             {
                                 PointsSystem.CasinoData.AwardPoints(User, num);
                                 Bought = num;
@@ -172,13 +175,20 @@ namespace Server.Engines.ResortAndCasino
                         string text2 = tr2.Text;
                         int num2 = Utility.ToInt32(text2);
 
-                        if (num2 > 0)
+                        long payout = (long)num2 * CasinoData.ChipCost;
+
+                        if (num2 > 0 && payout <= int.MaxValue)
                         {
-                            if (num2 <= (int)PointsSystem.CasinoData.GetPoints(User))
+                            if (num2 > (int)PointsSystem.CasinoData.GetPoints(User))
                             {
-                                Banker.Deposit(User, num2 * CasinoData.ChipCost);
+                                this.Section = Section.Error;
+                                Message = 1153180; // You do not have enough casino chips
+                                Refresh();
+                            }
+                            else if (Banker.Deposit(User, (int)payout)) // Deduct chips only when the bank actually accepted the gold.
+                            {
                                 PointsSystem.CasinoData.DeductPoints(User, num2, false);
-                                User.SendLocalizedMessage(1060397, (num2 * CasinoData.ChipCost).ToString(CultureInfo.GetCultureInfo("en-US"))); // ~1_AMOUNT~ gold has been deposited into your bank box.
+                                User.SendLocalizedMessage(1060397, payout.ToString(CultureInfo.GetCultureInfo("en-US"))); // ~1_AMOUNT~ gold has been deposited into your bank box.
 
                                 Section = Section.None;
 
@@ -188,7 +198,7 @@ namespace Server.Engines.ResortAndCasino
                             else
                             {
                                 this.Section = Section.Error;
-                                Message = 1153180; // You do not have enough casino chips
+                                Message = 1153187; // You entered an invalid value
                                 Refresh();
                             }
                         }
