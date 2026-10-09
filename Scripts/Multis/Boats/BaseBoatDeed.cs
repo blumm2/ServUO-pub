@@ -68,16 +68,24 @@ namespace Server.Multis
         public override void OnDoubleClick(Mobile from)
         {
             BaseBoat boat = BaseBoat.FindBoatAt(from, from.Map);
-            
-            if (from.AccessLevel < AccessLevel.GameMaster && (from.Map == Map.Ilshenar || from.Map == Map.Malas))
+
+            Type boatType;
+            bool isRowBoat;
+            GetBoatInfo(out boatType, out isRowBoat);
+
+            if (!IsChildOf(from.Backpack))
+            {
+                from.SendLocalizedMessage(1042001); // That must be in your pack for you to use it.
+            }
+            else if (from.AccessLevel < AccessLevel.GameMaster && (from.Map == Map.Ilshenar || from.Map == Map.Malas))
             {
                 from.SendLocalizedMessage(1010567, null, 0x25); // You may not place a boat from this location.
             }
-            else if (Core.HS && BaseBoat.HasBoat(from) && !Boat.IsRowBoat)
+            else if (Core.HS && BaseBoat.HasBoat(from) && !isRowBoat)
             {
                 from.SendLocalizedMessage(1116758); // You already have a ship deployed!
             }
-            else if (from.Region.IsPartOf(typeof(HouseRegion)) || boat != null && (boat.GetType() == Boat.GetType() || !boat.IsRowBoat && !(this is RowBoatDeed)))
+            else if (from.Region.IsPartOf(typeof(HouseRegion)) || boat != null && (boat.GetType() == boatType || !boat.IsRowBoat && !(this is RowBoatDeed)))
             {
                 from.SendLocalizedMessage(1010568, null, 0x25); // You may not place a ship while on another ship or inside a house.
             }
@@ -94,12 +102,43 @@ namespace Server.Multis
 
         public abstract BaseBoat Boat { get; }
 
+        // Boat creates a new world item on every access, so checks inspect one instance and delete it
+        // instead of leaking a boat per check.
+        private void GetBoatInfo(out Type boatType, out bool isRowBoat)
+        {
+            BaseBoat probe = Boat;
+
+            boatType = probe != null ? probe.GetType() : null;
+            isRowBoat = probe != null && probe.IsRowBoat;
+
+            if (probe != null)
+            {
+                probe.Delete();
+            }
+        }
+
         public void OnPlacement(Mobile from, Point3D p, int itemID, Direction d)
         {
+            Type boatType;
+            bool isRowBoat;
+
             if (Deleted)
             {
                 return;
-            }           
+            }
+            else if (!IsChildOf(from.Backpack))
+            {
+                // Re-checked: the deed may have been traded away while the placement gump was open.
+                from.SendLocalizedMessage(1042001); // That must be in your pack for you to use it.
+                return;
+            }
+
+            GetBoatInfo(out boatType, out isRowBoat);
+
+            if (Core.HS && BaseBoat.HasBoat(from) && !isRowBoat)
+            {
+                from.SendLocalizedMessage(1116758); // You already have a ship deployed!
+            }
             else
             {
                 Map map = from.Map;
@@ -115,7 +154,7 @@ namespace Server.Multis
 
                 BaseBoat b = BaseBoat.FindBoatAt(from, from.Map);
 
-                if (from.Region.IsPartOf(typeof(HouseRegion)) || b != null && (b.GetType() == Boat.GetType() || !b.IsRowBoat && !(this is RowBoatDeed)))
+                if (from.Region.IsPartOf(typeof(HouseRegion)) || b != null && (b.GetType() == boatType || !b.IsRowBoat && !(this is RowBoatDeed)))
                 {
                     from.SendLocalizedMessage(1010568, null, 0x25); // You may not place a ship while on another ship or inside a house.
                     return;
