@@ -31,6 +31,7 @@ namespace Server.Network
 
 					if (pw != null)
 					{
+						pw.m_InPool = false;
 						pw.m_Capacity = capacity;
 						pw.m_Stream.SetLength(0);
 					}
@@ -49,8 +50,10 @@ namespace Server.Network
 		{
 			lock (m_Pool)
 			{
-				if (!m_Pool.Contains(pw))
+				// A flag instead of m_Pool.Contains, which scanned the whole pool on every packet.
+				if (!pw.m_InPool)
 				{
+					pw.m_InPool = true;
 					m_Pool.Push(pw);
 				}
 				else
@@ -76,6 +79,9 @@ namespace Server.Network
 		private readonly MemoryStream m_Stream;
 
 		private int m_Capacity;
+
+		// Guarded by the m_Pool lock.
+		private bool m_InPool;
 
 		/// <summary>
 		///     Internal format buffer.
