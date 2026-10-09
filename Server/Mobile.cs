@@ -10143,11 +10143,10 @@ namespace Server
 
 					eable.Free();
 
-					Packet hbpPacket = Packet.Acquire(new HealthbarPoison(this)), 
-						   hbyPacket = Packet.Acquire(new HealthbarYellow(this));
-
-					Packet hbpKRPacket = Packet.Acquire(new HealthbarPoisonEC(this)),
-						   hbyKRPacket = Packet.Acquire(new HealthbarYellowEC(this));
+					// Built on first use: most steps have nobody newly entering range, yet all four packets
+					// used to be created on every move.
+					Packet hbpPacket = null, hbyPacket = null;
+					Packet hbpKRPacket = null, hbyKRPacket = null;
 
 					NetState ourState = m_NetState;
 
@@ -10190,11 +10189,23 @@ namespace Server
 
 									if (m.m_NetState.IsEnhancedClient)
 									{
+										if (hbpKRPacket == null)
+										{
+											hbpKRPacket = Packet.Acquire(new HealthbarPoisonEC(this));
+											hbyKRPacket = Packet.Acquire(new HealthbarYellowEC(this));
+										}
+
 										m.m_NetState.Send(hbpKRPacket);
 										m.m_NetState.Send(hbyKRPacket);
 									}
 									else if (m.m_NetState.StygianAbyss)
 									{
+										if (hbpPacket == null)
+										{
+											hbpPacket = Packet.Acquire(new HealthbarPoison(this));
+											hbyPacket = Packet.Acquire(new HealthbarYellow(this));
+										}
+
 										m.m_NetState.Send(hbpPacket);
 										m.m_NetState.Send(hbyPacket);
 									}
@@ -10269,11 +10280,23 @@ namespace Server
 
 								if (ns.IsEnhancedClient)
 								{
+									if (hbpKRPacket == null)
+									{
+										hbpKRPacket = Packet.Acquire(new HealthbarPoisonEC(this));
+										hbyKRPacket = Packet.Acquire(new HealthbarYellowEC(this));
+									}
+
 									ns.Send(hbpKRPacket);
 									ns.Send(hbyKRPacket);
 								}
 								else if (ns.StygianAbyss)
 								{
+									if (hbpPacket == null)
+									{
+										hbpPacket = Packet.Acquire(new HealthbarPoison(this));
+										hbyPacket = Packet.Acquire(new HealthbarYellow(this));
+									}
+
 									ns.Send(hbpPacket);
 									ns.Send(hbyPacket);
 								}
