@@ -227,26 +227,25 @@ namespace Server
 			_GetBytes(b);
 		}
 
-		public unsafe double NextDouble()
+		public double NextDouble()
 		{
-			var b = new byte[8];
-
-			if (BitConverter.IsLittleEndian)
-			{
-				b[7] = 0;
-				_GetBytes(b, 0, 7);
-			}
-			else
-			{
-				b[0] = 0;
-				_GetBytes(b, 1, 7);
-			}
+			// Reads 7 random bytes straight from the working buffer (little-endian, top byte zero) instead
+			// of allocating a byte[8] per call; Utility.Random* goes through here constantly.
+			CheckSwap(7);
 
 			ulong r = 0;
-			fixed (byte* buf = b)
+
+			lock (_sync)
 			{
-				r = *(ulong*)(&buf[0]) >> 3;
+				for (int i = 0; i < 7; i++)
+				{
+					r |= (ulong)_Working[_Index + i] << (8 * i);
+				}
+
+				_Index += 7;
 			}
+
+			r >>= 3;
 
 			/* double: 53 bits of significand precision
 			 * ulong.MaxValue >> 11 = 9007199254740991
