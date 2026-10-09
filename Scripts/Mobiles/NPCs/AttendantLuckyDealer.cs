@@ -115,15 +115,25 @@ namespace Server.Mobiles
                 if (this.m_Dealer == null || this.m_Dealer.Deleted)
                     return;
 
+                Mobile from = sender.Mobile;
+
+                if (from == null || from.Map != this.m_Dealer.Map || !from.InRange(this.m_Dealer, 12))
+                    return;
+
                 if (info.ButtonID == 1)
                 {
                     int dice = 1;
-                    int faces = 4;		
+                    int faces = 4;
 
-                    if (info.Switches.Length == 2)
+                    // Accept only the radio values this gump offers; switch IDs come from the client unchecked.
+                    for (int i = 0; i < info.Switches.Length; i++)
                     {
-                        dice = info.Switches[0] - 1000;
-                        faces = info.Switches[1];
+                        int id = info.Switches[i];
+
+                        if (id >= 1001 && id <= 1004)
+                            dice = id - 1000;
+                        else if (IsValidFaces(id))
+                            faces = id;
                     }
 
                     if (this.m_Dealer.m_NextUse < DateTime.UtcNow)
@@ -157,6 +167,11 @@ namespace Server.Mobiles
 
                     sender.Mobile.SendGump(new InternalGump(this.m_Dealer, dice, faces));
                 }
+            }
+
+            private static bool IsValidFaces(int faces)
+            {
+                return faces == 4 || faces == 6 || faces == 8 || faces == 10 || faces == 12 || faces == 20 || faces == 100;
             }
         }
     }
