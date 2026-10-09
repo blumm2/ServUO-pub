@@ -1381,6 +1381,44 @@ namespace Server.Network
 			}
 		}
 
+		private static bool GumpHasSwitch(Gump gump, int switchID)
+		{
+			foreach (var e in gump.Entries)
+			{
+				if (e is GumpCheck && ((GumpCheck)e).SwitchID == switchID)
+				{
+					return true;
+				}
+
+				if (e is GumpRadio && ((GumpRadio)e).SwitchID == switchID)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private static bool GumpHasTextEntry(Gump gump, int entryID, int textLength)
+		{
+			foreach (var e in gump.Entries)
+			{
+				if (e is GumpTextEntry && ((GumpTextEntry)e).EntryID == entryID)
+				{
+					return true;
+				}
+
+				if (e is GumpTextEntryLimited && ((GumpTextEntryLimited)e).EntryID == entryID)
+				{
+					int size = ((GumpTextEntryLimited)e).Size;
+
+					return size <= 0 || textLength <= size;
+				}
+			}
+
+			return false;
+		}
+
 		public static void DisplayGumpResponse(NetState state, PacketReader pvSrc)
 		{
 			int serial = pvSrc.ReadInt32();
@@ -1436,6 +1474,16 @@ namespace Server.Network
 					for (int j = 0; j < switches.Length; ++j)
 					{
 						switches[j] = pvSrc.ReadInt32();
+
+						// Only switch IDs of checkboxes/radios this gump actually contains are accepted.
+						if (!GumpHasSwitch(gump, switches[j]))
+						{
+							Utility.PushColor(ConsoleColor.Red);
+							state.WriteConsole("Invalid gump response, disconnecting...");
+							Utility.PopColor();
+							state.Dispose();
+							return;
+						}
 					}
 
 					int textCount = pvSrc.ReadInt32();
@@ -1466,6 +1514,17 @@ namespace Server.Network
 						}
 
 						string text = pvSrc.ReadUnicodeStringSafe(textLength);
+
+						// The entry must exist in this gump and respect its size limit, if any.
+						if (!GumpHasTextEntry(gump, entryID, text.Length))
+						{
+							Utility.PushColor(ConsoleColor.Red);
+							state.WriteConsole("Invalid gump response, disconnecting...");
+							Utility.PopColor();
+							state.Dispose();
+							return;
+						}
+
 						textEntries[j] = new TextRelay(entryID, text);
 					}
 
