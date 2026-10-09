@@ -196,7 +196,8 @@ namespace Server.Misc
 			else
 				newChar.Race = Race.DefaultRace;
 
-			newChar.Hue = args.Hue | 0x8000;
+			// Hues come from the client: clip them to the race's ranges like shirt/pants hues are clipped.
+			newChar.Hue = newChar.Race.ClipSkinHue(args.Hue & 0x3FFF) | 0x8000;
 
 			newChar.Hunger = 20;
 
@@ -234,13 +235,13 @@ namespace Server.Misc
 			if (race.ValidateHair(newChar, args.HairID))
 			{
 				newChar.HairItemID = args.HairID;
-				newChar.HairHue = args.HairHue;
+				newChar.HairHue = race.ClipHairHue(args.HairHue & 0x3FFF);
 			}
 
 			if (race.ValidateFacialHair(newChar, args.BeardID))
 			{
 				newChar.FacialHairItemID = args.BeardID;
-				newChar.FacialHairHue = args.BeardHue;
+				newChar.FacialHairHue = race.ClipHairHue(args.BeardHue & 0x3FFF);
 			}
 
 			var faceID = args.FaceID;
@@ -248,7 +249,7 @@ namespace Server.Misc
 			if (faceID > 0 && race.ValidateFace(newChar.Female, faceID))
 			{
 				newChar.FaceItemID = faceID;
-				newChar.FaceHue = args.FaceHue;
+				newChar.FaceHue = race.ClipFaceHue(args.FaceHue & 0x3FFF);
 			}
 			else
 			{
