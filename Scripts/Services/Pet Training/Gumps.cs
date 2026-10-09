@@ -443,6 +443,11 @@ namespace Server.Mobiles
             if (Creature == null || Creature.Map == null || Creature.Map == Map.Internal || !Creature.Alive || Creature.Deleted || Creature.IsDeadBondedPet)
                 id = 0;
 
+            // Options, cancel and begin training are owner actions; the pet may have changed hands
+            // since the gump was opened.
+            if (id >= 2 && !(Creature.Controlled && Creature.ControlMaster == User))
+                id = 0;
+
             switch (id)
             {
                 case 0:
@@ -502,6 +507,9 @@ namespace Server.Mobiles
                 case 3: // cancel
                     BaseGump.SendGump(new PetTrainingConfirmGump(User, 1153093, 1158019, () =>
                         {
+                            if (Creature.Deleted || !Creature.Controlled || Creature.ControlMaster != User)
+                                return;
+
                             var trainProfile1 = PetTrainingHelper.GetTrainingProfile(Creature, true);
 
                             if (trainProfile1 != null)
@@ -749,6 +757,12 @@ namespace Server.Mobiles
     {
         public BaseCreature Creature { get; private set; }
         public int Category { get; private set; }
+
+        // Only the pet's current master may act on its training (it may have been transferred meanwhile).
+        public override bool IsResponseValid(Server.Network.NetState state)
+        {
+            return Creature != null && !Creature.Deleted && Creature.Controlled && Creature.ControlMaster == User;
+        }
 
         public AbilityProfile AbilityProfile { get; private set; }
         public TrainingProfile TrainingProfile { get; private set; }
@@ -1240,6 +1254,11 @@ namespace Server.Mobiles
     {
         public BaseCreature Creature { get; private set; }
         public TrainingPoint TrainingPoint { get; private set; }
+
+        public override bool IsResponseValid(Server.Network.NetState state)
+        {
+            return Creature != null && !Creature.Deleted && Creature.Controlled && Creature.ControlMaster == User;
+        }
 
         public int Value { get; private set; }
         public int StartValue { get; private set; }
@@ -1762,6 +1781,11 @@ namespace Server.Mobiles
     public class PetTrainingPlanningGump : BaseGump
     {
         public BaseCreature Creature { get; private set; }
+
+        public override bool IsResponseValid(Server.Network.NetState state)
+        {
+            return Creature != null && !Creature.Deleted && Creature.Controlled && Creature.ControlMaster == User;
+        }
 
         public PetTrainingPlanningGump(PlayerMobile pm, BaseCreature bc)
             : base(pm, 50, 200)
