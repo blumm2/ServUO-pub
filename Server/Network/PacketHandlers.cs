@@ -1530,6 +1530,12 @@ namespace Server.Network
 
 					state.RemoveGump(gump);
 
+					// The gump's captured state may be outdated (item moved, owner changed...).
+					if (!gump.IsResponseValid(state))
+					{
+						return;
+					}
+
 					GumpProfile prof = GumpProfile.Acquire(gump.GetType());
 
 					if (prof != null)

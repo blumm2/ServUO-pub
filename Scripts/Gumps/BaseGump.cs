@@ -199,6 +199,15 @@ namespace Server.Gumps
             OnClosed();
         }
 
+        // Server-side closes (CloseGump, Close()) used to skip OnServerClosed, leaving Open set and
+        // children/parent links dangling.
+        public override void OnServerClose(NetState owner)
+        {
+            base.OnServerClose(owner);
+
+            OnServerClosed(owner);
+        }
+
         public virtual void Close()
         {
             if (User == null || User.NetState == null)

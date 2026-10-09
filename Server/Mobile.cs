@@ -7467,15 +7467,42 @@ namespace Server
 		{
 			if (m_NetState != null)
 			{
+				NetState ns = m_NetState;
 				Gump gump = FindGump(type);
 
 				if (gump != null)
 				{
-					m_NetState.Send(new CloseGump(gump.TypeID, 0));
+					int typeID = gump.TypeID;
 
-					m_NetState.RemoveGump(gump);
+					ns.Send(new CloseGump(typeID, 0));
 
-					gump.OnServerClose(m_NetState);
+					// The close packet makes the client close every gump with this type ID, not just
+					// the one found here. Drop exactly that set on the server too: the others used to
+					// stay registered and could still be answered with a crafted packet. Gumps with
+					// their own type ID (e.g. one per ship cannon) are unaffected, as before.
+					List<Gump> closed = null;
+
+					for (int i = ns.Gumps.Count - 1; i >= 0; i--)
+					{
+						if (ns.Gumps[i].TypeID == typeID)
+						{
+							if (closed == null)
+							{
+								closed = new List<Gump>();
+							}
+
+							closed.Add(ns.Gumps[i]);
+							ns.RemoveGump(i);
+						}
+					}
+
+					if (closed != null)
+					{
+						foreach (Gump g in closed)
+						{
+							g.OnServerClose(ns);
+						}
+					}
 				}
 
 				return true;

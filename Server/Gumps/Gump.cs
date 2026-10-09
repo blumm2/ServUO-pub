@@ -489,5 +489,15 @@ namespace Server.Gumps
 
 		public virtual void OnServerClose(NetState owner)
 		{ }
+
+		/// <summary>
+		/// Called before <see cref="OnResponse"/>. Return false when the state this gump was built
+		/// from no longer holds (item gone, out of range, ownership changed); the response is then
+		/// ignored.
+		/// </summary>
+		public virtual bool IsResponseValid(NetState sender)
+		{
+			return true;
+		}
 	}
 }
