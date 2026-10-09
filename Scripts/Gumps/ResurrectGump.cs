@@ -27,6 +27,29 @@ namespace Server.Gumps
 
         private Action<Mobile> m_Callback;
 
+        // Where the offer was made; accepting it far away or after being resurrected is refused.
+        private const int OfferRange = 12;
+        private readonly Map m_OfferMap;
+        private readonly Point3D m_OfferLocation;
+
+        public override bool IsResponseValid(NetState sender)
+        {
+            Mobile from = sender.Mobile;
+
+            if (from == null || from.Alive || from.Map != m_OfferMap || !from.InRange(m_OfferLocation, OfferRange))
+            {
+                return false;
+            }
+
+            if (m_Healer != null && m_Healer != from &&
+                (m_Healer.Deleted || m_Healer.Map != from.Map || !from.InRange(m_Healer, OfferRange)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         public ResurrectGump(Mobile owner)
             : this(owner, owner, ResurrectMessage.Generic, false)
         {
@@ -67,6 +90,8 @@ namespace Server.Gumps
         {
             m_Healer = healer;
             m_FromSacrifice = fromSacrifice;
+            m_OfferMap = owner.Map;
+            m_OfferLocation = owner.Location;
             m_HitsScalar = hitsScalar;
 
             m_Msg = msg;
