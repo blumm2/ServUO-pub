@@ -4029,7 +4029,15 @@ namespace Server
             OnItemAdded(item);
         }
 
-        private static event Action DeltaQueue;
+        // Items with pending changes, processed in order once per main loop pass. This replaces a
+        // multicast event: every += copied the whole invocation list, O(n^2) per pass. An entry
+        // whose flags were cleared meanwhile (RemDelta, direct ProcessDelta) is a no-op.
+        // The lists are owned by the core thread and touched without any synchronization; a Delta
+        // raised on another thread goes through a lock-free queue drained at the next pass.
+        private static List<Item> m_DeltaQueue = new List<Item>();
+        private static List<Item> m_SpareDeltaQueue;
+        private static readonly System.Collections.Concurrent.ConcurrentQueue<Item> m_ForeignDeltaQueue =
+            new System.Collections.Concurrent.ConcurrentQueue<Item>();
 
         public void Delta(ItemDelta flags)
         {
@@ -4044,7 +4052,14 @@ namespace Server
             {
                 SetFlag(ImplFlag.InQueue, true);
 
-                DeltaQueue += ProcessDelta;
+                if (Thread.CurrentThread == Core.Thread)
+                {
+                    m_DeltaQueue.Add(this);
+                }
+                else
+                {
+                    m_ForeignDeltaQueue.Enqueue(this);
+                }
             }
         }
 
@@ -4054,9 +4069,8 @@ namespace Server
 
             if (GetFlag(ImplFlag.InQueue) && m_DeltaFlags == ItemDelta.None)
             {
+                // The queue entry stays; processing an item without flags does nothing.
                 SetFlag(ImplFlag.InQueue, false);
-
-                DeltaQueue -= ProcessDelta;
             }
         }
 
@@ -4341,9 +4355,40 @@ namespace Server
 
         public static void ProcessDeltaQueue()
         {
-            var delta = Interlocked.Exchange(ref DeltaQueue, null);
+            // Called on the core thread only. IsEmpty only reads (no interlocked write), so the common
+            // case of no foreign deltas costs no atomic operation and no cache line invalidation.
+            if (!m_ForeignDeltaQueue.IsEmpty)
+            {
+                Item foreign;
 
-            delta?.Invoke();
+                while (m_ForeignDeltaQueue.TryDequeue(out foreign))
+                {
+                    m_DeltaQueue.Add(foreign);
+                }
+            }
+
+            if (m_DeltaQueue.Count == 0)
+            {
+                return;
+            }
+
+            // Swap in an empty list: deltas raised while processing go to the next pass.
+            // A nested call (e.g. from Resurrect) finds no spare list and allocates one.
+            List<Item> queue = m_DeltaQueue;
+            m_DeltaQueue = m_SpareDeltaQueue ?? new List<Item>();
+            m_SpareDeltaQueue = null;
+
+            for (int i = 0; i < queue.Count; i++)
+            {
+                queue[i].ProcessDelta();
+            }
+
+            queue.Clear();
+
+            if (m_SpareDeltaQueue == null)
+            {
+                m_SpareDeltaQueue = queue;
+            }
         }
 
         public virtual void OnDelete()

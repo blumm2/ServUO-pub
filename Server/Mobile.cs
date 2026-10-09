@@ -11199,7 +11199,15 @@ namespace Server
 			m_CreationTime = DateTime.UtcNow;
 		}
 
-		private static event Action DeltaQueue;
+		// Mobiles with pending changes, processed in order once per main loop pass (replaces a multicast
+		// event whose += copied the whole invocation list, O(n^2) per pass). Processing a mobile
+		// whose flags were already cleared by a direct ProcessDelta call does nothing.
+		// The lists are owned by the core thread and touched without any synchronization; a Delta
+		// raised on another thread goes through a lock-free queue drained at the next pass.
+		private static List<Mobile> m_DeltaQueue = new List<Mobile>();
+		private static List<Mobile> m_SpareDeltaQueue;
+		private static readonly System.Collections.Concurrent.ConcurrentQueue<Mobile> m_ForeignDeltaQueue =
+			new System.Collections.Concurrent.ConcurrentQueue<Mobile>();
 
 		private bool m_InDeltaQueue;
 		private MobileDelta m_DeltaFlags;
@@ -11217,7 +11225,14 @@ namespace Server
 			{
 				m_InDeltaQueue = true;
 
-                DeltaQueue += ProcessDelta;
+				if (Thread.CurrentThread == Core.Thread)
+				{
+					m_DeltaQueue.Add(this);
+				}
+				else
+				{
+					m_ForeignDeltaQueue.Enqueue(this);
+				}
 			}
 		}
 
@@ -11786,11 +11801,42 @@ namespace Server
 		}
 
 		public static void ProcessDeltaQueue()
-        {
-            var delta = Interlocked.Exchange(ref DeltaQueue, null);
+		{
+			// Called on the core thread only. IsEmpty only reads (no interlocked write), so the common
+			// case of no foreign deltas costs no atomic operation and no cache line invalidation.
+			if (!m_ForeignDeltaQueue.IsEmpty)
+			{
+				Mobile foreign;
 
-            delta?.Invoke();
-        }
+				while (m_ForeignDeltaQueue.TryDequeue(out foreign))
+				{
+					m_DeltaQueue.Add(foreign);
+				}
+			}
+
+			if (m_DeltaQueue.Count == 0)
+			{
+				return;
+			}
+
+			// Swap in an empty list: deltas raised while processing go to the next pass.
+			// A nested call (Resurrect calls this mid-tick) finds no spare list and allocates one.
+			List<Mobile> queue = m_DeltaQueue;
+			m_DeltaQueue = m_SpareDeltaQueue ?? new List<Mobile>();
+			m_SpareDeltaQueue = null;
+
+			for (int i = 0; i < queue.Count; i++)
+			{
+				queue[i].ProcessDelta();
+			}
+
+			queue.Clear();
+
+			if (m_SpareDeltaQueue == null)
+			{
+				m_SpareDeltaQueue = queue;
+			}
+		}
 
 		[CommandProperty(AccessLevel.Counselor, AccessLevel.GameMaster)]
 		public int Deaths
