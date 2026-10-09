@@ -36,6 +36,14 @@ namespace Server.Items
 				ToMap == Map.Internal)
 				return;
 
+			// The core only checks a range of 18 tiles for double-clicks; a climb rope must be reachable.
+			if (from.AccessLevel < AccessLevel.GameMaster &&
+				(from.Map != Map || !from.InRange(GetWorldLocation(), 2) || !from.InLOS(this)))
+			{
+				from.SendLocalizedMessage(500446); // That is too far away.
+				return;
+			}
+
 			from.MoveToWorld(ToLocation, ToMap);
 		}
 

@@ -753,8 +753,9 @@ namespace Server.Engines.Craft
                                 }
                             case 10: // Quest Item/Non Quest Item toggle
                                 {
-                                    //if (context == null || !system.QuestOption)
-                                    //break;
+                                    if (context == null)
+                                        break;
+
                                     switch ( context.QuestOption )
                                     {
                                         case CraftQuestOption.QuestItem:
