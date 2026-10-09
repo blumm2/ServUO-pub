@@ -171,10 +171,12 @@ namespace Server
 
 		public static IEnumerable<IEntity> SelectEntities(Sector s, Rectangle2D bounds)
 		{
+			// Concat, not Union: mobiles and items are disjoint, and Union built two HashSets per sector
+			// on every range query (several per player step).
 			return
-				Enumerable.Empty<IEntity>()
-						  .Union(s.Mobiles.Where(o => o != null && !o.Deleted))
-						  .Union(s.Items.Where(o => o != null && !o.Deleted && o.Parent == null))
+				Enumerable.Concat<IEntity>(
+						  s.Mobiles.Where(o => o != null && !o.Deleted),
+						  s.Items.Where(o => o != null && !o.Deleted && o.Parent == null))
 						  .Where(bounds.Contains);
 		}
 
