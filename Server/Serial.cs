@@ -4,7 +4,8 @@ using System;
 
 namespace Server
 {
-	public struct Serial : IComparable, IComparable<Serial>
+	// IEquatable lets Dictionary<Serial, T> (World.Items/Mobiles) compare without boxing on every lookup.
+	public struct Serial : IComparable, IComparable<Serial>, IEquatable<Serial>
 	{
 		private readonly int m_Serial;
 
@@ -78,6 +79,11 @@ namespace Server
 			}
 
 			throw new ArgumentException();
+		}
+
+		public bool Equals(Serial other)
+		{
+			return other.m_Serial == m_Serial;
 		}
 
 		public override bool Equals(object o)
