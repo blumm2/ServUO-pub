@@ -81,7 +81,9 @@ namespace Server
                 options |= FileOptions.Asynchronous;
             }
 
-            if (unbuffered)
+            // Unbuffered writes go through Kernel32 CreateFile, so they exist on Windows only; other
+            // systems use a regular buffered stream.
+            if (unbuffered && OperatingSystem.IsWindows())
             {
                 options |= NoBuffering;
             }
