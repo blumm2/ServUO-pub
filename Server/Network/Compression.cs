@@ -168,25 +168,10 @@ namespace Server.Network
 
 		static Compression()
 		{
-			if (Core.Unix)
-			{
-				if (Core.Is64Bit)
-				{
-					Compressor = new CompressorUnix64();
-				}
-				else
-				{
-					Compressor = new CompressorUnix32();
-				}
-			}
-			else if (Core.Is64Bit)
-			{
-				Compressor = new Compressor64();
-			}
-			else
-			{
-				Compressor = new Compressor32();
-			}
+			// Managed zlib (System.IO.Compression) on every platform: same zlib format as the native
+			// compress()/uncompress(), without zlibwapi/libz binaries (none exist for ARM64 here).
+			// The native wrappers below are kept for anyone who references them directly.
+			Compressor = new ManagedCompressor();
 		}
 
 		public static ZLibError Pack(byte[] dest, ref int destLength, byte[] source, int sourceLength)
@@ -213,6 +198,108 @@ namespace Server.Network
 		ZLibError Compress(byte[] dest, ref int destLength, byte[] source, int sourceLength, ZLibQuality quality);
 
 		ZLibError Decompress(byte[] dest, ref int destLength, byte[] source, int sourceLength);
+	}
+
+	/// <summary>
+	/// zlib-format compression via System.IO.Compression.ZLibStream (2-byte header, deflate data,
+	/// Adler-32 trailer), matching the native compress/uncompress contract: destLength is the
+	/// capacity of dest on input and the number of bytes produced on output.
+	/// </summary>
+	public sealed class ManagedCompressor : ICompressor
+	{
+		public string Version { get { return "System.IO.Compression"; } }
+
+		public ZLibError Compress(byte[] dest, ref int destLength, byte[] source, int sourceLength)
+		{
+			return Compress(dest, ref destLength, source, sourceLength, ZLibQuality.Default);
+		}
+
+		// zlib stream of zero bytes (header 78 9C, empty final block, Adler-32 = 1). ZLibStream writes
+		// nothing at all when given no data, while native compress() produces this.
+		private static readonly byte[] m_EmptyStream = { 0x78, 0x9C, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01 };
+
+		public ZLibError Compress(byte[] dest, ref int destLength, byte[] source, int sourceLength, ZLibQuality quality)
+		{
+			if (sourceLength == 0)
+			{
+				if (destLength < m_EmptyStream.Length)
+				{
+					return ZLibError.BufferError;
+				}
+
+				Buffer.BlockCopy(m_EmptyStream, 0, dest, 0, m_EmptyStream.Length);
+				destLength = m_EmptyStream.Length;
+
+				return ZLibError.Okay;
+			}
+
+			try
+			{
+				// A fixed-size stream over dest: running out of room throws instead of growing.
+				using (var output = new System.IO.MemoryStream(dest, 0, destLength, true))
+				{
+					using (var zlib = new System.IO.Compression.ZLibStream(output, GetLevel(quality), true))
+					{
+						zlib.Write(source, 0, sourceLength);
+					}
+
+					destLength = (int)output.Position;
+				}
+
+				return ZLibError.Okay;
+			}
+			catch (NotSupportedException)
+			{
+				return ZLibError.BufferError;
+			}
+		}
+
+		public ZLibError Decompress(byte[] dest, ref int destLength, byte[] source, int sourceLength)
+		{
+			try
+			{
+				using (var input = new System.IO.MemoryStream(source, 0, sourceLength, false))
+				using (var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress))
+				{
+					int total = 0;
+					int read;
+
+					while (total < destLength && (read = zlib.Read(dest, total, destLength - total)) > 0)
+					{
+						total += read;
+					}
+
+					// More output than dest can hold is a buffer error, as with native uncompress.
+					if (total == destLength && zlib.ReadByte() >= 0)
+					{
+						return ZLibError.BufferError;
+					}
+
+					destLength = total;
+				}
+
+				return ZLibError.Okay;
+			}
+			catch (System.IO.InvalidDataException)
+			{
+				return ZLibError.DataError;
+			}
+		}
+
+		private static System.IO.Compression.CompressionLevel GetLevel(ZLibQuality quality)
+		{
+			switch (quality)
+			{
+				case ZLibQuality.None:
+					return System.IO.Compression.CompressionLevel.NoCompression;
+				case ZLibQuality.Speed:
+					return System.IO.Compression.CompressionLevel.Fastest;
+				case ZLibQuality.Size:
+					return System.IO.Compression.CompressionLevel.SmallestSize;
+				default:
+					return System.IO.Compression.CompressionLevel.Optimal;
+			}
+		}
 	}
 
 	public sealed class Compressor32 : ICompressor
