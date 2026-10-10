@@ -15,6 +15,16 @@ namespace Server
 
         public static Assembly[] Assemblies { get; set; }
 
+        // Solution platform matching the running process (x64 on PCs, ARM64 on e.g. a Raspberry Pi).
+        private static string BuildPlatform
+        {
+            get
+            {
+                return System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture ==
+                       System.Runtime.InteropServices.Architecture.Arm64 ? "ARM64" : "x64";
+            }
+        }
+
         public static bool Compile(bool debug, bool cache)
         {
             try
@@ -37,7 +47,10 @@ namespace Server
                             var info = new ProcessStartInfo
                             {
                                 FileName = "dotnet",
-                                Arguments = $"build \"{proj}\" -c {(debug ? "Debug" : "Release")}",
+                                // Same platform as the running server, so the build is incremental with the
+                                // solution build and lands in the server directory: without it the scripts
+                                // were built to Scripts\bin and the stale Scripts.dll next to the server loaded.
+                                Arguments = $"build \"{proj}\" -c {(debug ? "Debug" : "Release")} -p:Platform={BuildPlatform}",
                                 ErrorDialog = false,
                                 UseShellExecute = false,
                                 CreateNoWindow = true,
