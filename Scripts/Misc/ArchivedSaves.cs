@@ -208,18 +208,19 @@ namespace Server.Misc
 
             _Sync.Reset();
 
-            var t = _Pack.BeginInvoke(source, EndPack, source);
+            // Task instead of delegate BeginInvoke, which modern .NET does not support.
+            var t = System.Threading.Tasks.Task.Run(() => _Pack(source));
 
             lock (_TaskRoot)
                 _Tasks.Add(t);
+
+            t.ContinueWith(EndTask);
         }
 
-        private static void EndPack(IAsyncResult r)
+        private static void EndTask(System.Threading.Tasks.Task t)
         {
-            _Pack.EndInvoke(r);
-
             lock (_TaskRoot)
-                _Tasks.Remove(r);
+                _Tasks.Remove(t);
 
             _Sync.Set();
         }
@@ -265,20 +266,12 @@ namespace Server.Misc
 
             _Sync.Reset();
 
-            var t = _Prune.BeginInvoke(threshold, EndPrune, threshold);
+            var t = System.Threading.Tasks.Task.Run(() => _Prune(threshold));
 
             lock (_TaskRoot)
                 _Tasks.Add(t);
-        }
 
-        private static void EndPrune(IAsyncResult r)
-        {
-            _Prune.EndInvoke(r);
-
-            lock (_TaskRoot)
-                _Tasks.Remove(r);
-
-            _Sync.Set();
+            t.ContinueWith(EndTask);
         }
     }
 }

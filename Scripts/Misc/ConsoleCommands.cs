@@ -59,7 +59,14 @@ namespace Server.Misc
 		{
 			_PollTimer = Timer.DelayCall(TimeSpan.Zero, TimeSpan.FromMilliseconds(100), ProcessCommand);
 
-			_Listen.BeginInvoke(r => ProcessInput(_Listen.EndInvoke(r)), null);
+			BeginListen();
+		}
+
+		// Reads the next console line on a pool thread. Delegate BeginInvoke (used before) is not
+		// supported on modern .NET.
+		private static void BeginListen()
+		{
+			System.Threading.Tasks.Task.Run(() => ProcessInput(_Listen()));
 		}
 
 		private static void ProcessInput(string input)
@@ -86,7 +93,7 @@ namespace Server.Misc
 
 			Interlocked.Exchange(ref _Command, String.Empty);
 
-			_Listen.BeginInvoke(r => ProcessInput(_Listen.EndInvoke(r)), null);
+			BeginListen();
 		}
 
 		private static PageEntry[] _Pages;

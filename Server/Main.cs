@@ -155,6 +155,23 @@ namespace Server
 
         public static string ExePath { get { return _ExePath ?? (_ExePath = Assembly.Location); } }
 
+        /// <summary>
+        /// Starts a new server process with the same arguments (restart, crash recovery). On modern
+        /// .NET the assembly is a .dll run either by the ServUO apphost or by "dotnet", so the
+        /// process host is started rather than ExePath.
+        /// </summary>
+        public static Process StartNewInstance()
+        {
+            string host = Environment.ProcessPath;
+
+            if (host != null && !String.Equals(Path.GetFileNameWithoutExtension(host), "dotnet", StringComparison.OrdinalIgnoreCase))
+            {
+                return Process.Start(host, Arguments);
+            }
+
+            return Process.Start(host ?? "dotnet", String.Format("\"{0}\" {1}", ExePath, Arguments));
+        }
+
         public static string BaseDirectory
         {
             get
@@ -288,7 +305,7 @@ namespace Server
 
             if (restart)
             {
-                Process.Start(ExePath, Arguments);
+                StartNewInstance();
             }
 
             Process.Kill();

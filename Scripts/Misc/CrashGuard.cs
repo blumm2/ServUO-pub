@@ -82,7 +82,7 @@ namespace Server.Misc
 
             try
             {
-                Process.Start(Core.ExePath, Core.Arguments);
+                Core.StartNewInstance();
                 Console.WriteLine("done");
 
                 e.Close = true;
