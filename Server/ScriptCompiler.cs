@@ -34,11 +34,17 @@ namespace Server
                     typeof(ScriptCompiler).Assembly
                 };
 
-                if (Dynamic)
+                var path = Path.Combine(Core.BaseDirectory, "Scripts");
+
+                // A deployment may ship only the prebuilt Scripts.dll (e.g. on a Raspberry Pi without the
+                // SDK or sources); enumerating the missing folder used to abort startup.
+                if (Dynamic && !Directory.Exists(path))
+                {
+                    Console.WriteLine("Core: No Scripts folder, using the prebuilt Scripts.dll");
+                }
+                else if (Dynamic)
                 {
                     Console.WriteLine("Core: Compiling scripts...");
-
-                    var path = Path.Combine(Core.BaseDirectory, "Scripts");
 
                     foreach (var proj in Directory.EnumerateFiles(path, "Scripts.csproj"))
                     {
