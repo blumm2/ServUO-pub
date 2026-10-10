@@ -19,23 +19,17 @@ namespace Server
 
             this.m_AppDomain = AppDomain.CurrentDomain;
 
-            this.m_AssemblyBuilder = this.m_AppDomain.DefineDynamicAssembly(
-                new AssemblyName(assemblyName),
-                canSave ? AssemblyBuilderAccess.RunAndSave : AssemblyBuilderAccess.Run);
-
+            // Modern .NET has no RunAndSave dynamic assemblies; all callers use run-only ones.
             if (canSave)
             {
-                this.m_ModuleBuilder = this.m_AssemblyBuilder.DefineDynamicModule(
-                    assemblyName,
-                    String.Format("{0}.dll", assemblyName.ToLower()),
-                    false);
+                throw new NotSupportedException("Saving dynamic assemblies is not supported on this runtime.");
             }
-            else
-            {
-                this.m_ModuleBuilder = this.m_AssemblyBuilder.DefineDynamicModule(
-                    assemblyName,
-                    false);
-            }
+
+            this.m_AssemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
+                new AssemblyName(assemblyName),
+                AssemblyBuilderAccess.Run);
+
+            this.m_ModuleBuilder = this.m_AssemblyBuilder.DefineDynamicModule(assemblyName);
         }
 
         public TypeBuilder DefineType(string typeName, TypeAttributes attrs, Type parentType)
@@ -45,8 +39,7 @@ namespace Server
 
         public void Save()
         {
-            this.m_AssemblyBuilder.Save(
-                String.Format("{0}.dll", this.m_AssemblyName.ToLower()));
+            throw new NotSupportedException("Saving dynamic assemblies is not supported on this runtime.");
         }
     }
 

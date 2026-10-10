@@ -3,6 +3,14 @@
 /Ultima/obj
 
 /Server.dll
+/ServUO.dll
+/ServUO.dll.config
+/*.deps.json
+/*.runtimeconfig.json
+# .NET 10 package assemblies and native assets copied next to the server
+/System.*.dll
+/Microsoft.*.dll
+/runtimes/
 /Server/bin
 /Server/obj
 

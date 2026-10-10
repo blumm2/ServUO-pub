@@ -3,9 +3,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Web.UI;
-using HtmlAttr = System.Web.UI.HtmlTextWriterAttribute;
-using HtmlTag = System.Web.UI.HtmlTextWriterTag;
+using HtmlAttr = Server.Engines.Reports.HtmlTextWriterAttribute;
+using HtmlTag = Server.Engines.Reports.HtmlTextWriterTag;
 using Server.Misc;
 
 namespace Server.Engines.Reports

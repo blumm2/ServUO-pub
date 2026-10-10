@@ -7,19 +7,32 @@ using DiagELog = System.Diagnostics.EventLog;
 
 namespace Server
 {
+	// Writes to the Windows Event Log; on other systems the entries go to the console instead.
 	public static class EventLog
 	{
 		static EventLog()
 		{
-			if (!DiagELog.SourceExists("ServUO"))
+			if (OperatingSystem.IsWindows() && !DiagELog.SourceExists("ServUO"))
 			{
 				DiagELog.CreateEventSource("ServUO", "Application");
 			}
 		}
 
+		private static void Write(string text, EventLogEntryType type, int eventID)
+		{
+			if (OperatingSystem.IsWindows())
+			{
+				DiagELog.WriteEntry("ServUO", text, type, eventID);
+			}
+			else
+			{
+				Console.WriteLine("EventLog {0} {1}: {2}", type, eventID, text);
+			}
+		}
+
 		public static void Error(int eventID, string text)
 		{
-			DiagELog.WriteEntry("ServUO", text, EventLogEntryType.Error, eventID);
+			Write(text, EventLogEntryType.Error, eventID);
 		}
 
 		public static void Error(int eventID, string format, params object[] args)
@@ -29,7 +42,7 @@ namespace Server
 
 		public static void Warning(int eventID, string text)
 		{
-			DiagELog.WriteEntry("ServUO", text, EventLogEntryType.Warning, eventID);
+			Write(text, EventLogEntryType.Warning, eventID);
 		}
 
 		public static void Warning(int eventID, string format, params object[] args)
@@ -39,7 +52,7 @@ namespace Server
 
 		public static void Inform(int eventID, string text)
 		{
-			DiagELog.WriteEntry("ServUO", text, EventLogEntryType.Information, eventID);
+			Write(text, EventLogEntryType.Information, eventID);
 		}
 
 		public static void Inform(int eventID, string format, params object[] args)

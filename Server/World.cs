@@ -1155,7 +1155,8 @@ namespace Server
                 throw new Exception("FATAL: Exception in EventSink.BeforeWorldSave", e);
             }
 
-			if (m_Metrics)
+			// Performance counters exist on Windows only; elsewhere the save runs without metrics.
+			if (m_Metrics && OperatingSystem.IsWindows())
 			{
 				using (SaveMetrics metrics = new SaveMetrics())
 					strategy.Save(metrics, permitBackgroundWrite);
