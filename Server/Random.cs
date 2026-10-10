@@ -126,7 +126,8 @@ namespace Server
 
 	public sealed class CSPRandom : IRandomImpl
 	{
-		private readonly RNGCryptoServiceProvider _CSP = new RNGCryptoServiceProvider();
+		// RandomNumberGenerator.Create() replaces the obsolete RNGCryptoServiceProvider (same CSPRNG).
+		private readonly RandomNumberGenerator _CSP = RandomNumberGenerator.Create();
 
 		private static int BUFFER_SIZE = 0x4000;
 		private static int LARGE_REQUEST = 0x40;

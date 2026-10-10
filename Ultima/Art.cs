@@ -587,7 +587,7 @@ namespace Ultima
 			{
 				var memidx = new MemoryStream();
 				var memmul = new MemoryStream();
-				var sha = new SHA256Managed();
+				var sha = SHA256.Create();
 				//StreamWriter Tex = new StreamWriter(new FileStream("d:/artlog.txt", FileMode.Create, FileAccess.ReadWrite));
 
 				using (BinaryWriter binidx = new BinaryWriter(memidx), binmul = new BinaryWriter(memmul))
