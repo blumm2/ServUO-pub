@@ -1,6 +1,5 @@
 # [ServUO]
 
-[![Build Status](https://travis-ci.com/ServUO/ServUO.svg?branch=master)](https://travis-ci.com/ServUO/ServUO)
 [![GitHub issues](https://img.shields.io/github/issues/servuo/servuo.svg)](https://github.com/ServUO/ServUO/issues)
 [![GitHub release](https://img.shields.io/github/release/servuo/servuo.svg)](https://github.com/ServUO/ServUO/releases)
 [![GitHub repo size](https://img.shields.io/github/repo-size/servuo/servuo.svg)](https://github.com/ServUO/ServUO/)
@@ -31,18 +30,22 @@ Run `make debug` for development, attaching a debugger and/or extended output.
 Run `make` or `make release` for production environment. Writing release is optinal by default
 
 
+### Requirements
+
+The [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) on every platform. The SDK, not just the runtime, is needed to run the server too: scripts are compiled at startup (`Config/Compiler.cfg`). Builds target x64, or ARM64 with `-p:Platform=ARM64`; `make` picks the platform of the machine.
+
 ### Linux Dependencies
 
 #### Ubuntu / Debian
 ```
 sudo add-apt-repository ppa:dotnet/backports
 sudo apt-get update
-sudo apt-get -y install zlib1g mono-complete dotnet-sdk-10.0 dotnet-runtime-10.0
+sudo apt-get -y install make dotnet-sdk-10.0
 ```
 
 #### Arch-based
 ```
-sudo pacman -S make mono dotnet-sdk dotnet-runtime
+sudo pacman -S make dotnet-sdk
 ```
 
 ### Summary
