@@ -492,19 +492,6 @@ namespace Server
                 Utility.PushColor(ConsoleColor.Yellow);
                 Console.WriteLine("Core: Unix environment detected");
                 Utility.PopColor();
-
-                try
-                {
-                    MethodInfo displayName = Type.GetType("Mono.Runtime").GetMethod("GetDisplayName", BindingFlags.NonPublic | BindingFlags.Static);
-
-                    if (displayName != null)
-                    {
-                        dotnet = displayName.Invoke(null, null).ToString();
-                    }
-                }
-                catch
-                {
-                }
             }
             else
             {
